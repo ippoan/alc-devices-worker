@@ -18,3 +18,11 @@ path = "crates/devices/src/devices.rs"
 # kiosk 端末の再ペアリング (判定・window を開ける口・取り直しの口。tests/re_pair_db.rs が偽の発行で通す。W6b-b)
 [[files]]
 path = "crates/devices/src/re_pair.rs"
+
+# FCM で端末に送る口 (W6b-c。tests/notify_db.rs が実 DB と偽の送信で通す)
+[[files]]
+path = "crates/devices/src/notify.rs"
+
+# FCM HTTP v1 の送信 (JWT の署名・token の交換・送信。単体テストが偽の HTTP と作った鍵で通す)
+[[files]]
+path = "crates/devices/src/fcm.rs"

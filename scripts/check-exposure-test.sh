@@ -62,6 +62,8 @@ mutate "staging に hyperdrive (本番の DB へ届く binding) を足す" \
   's = s.replace("[env.staging.observability]", "[[env.staging.hyperdrive]]\nbinding = \"DEVICES_HYPERDRIVE\"\nid = \"x\"\n\n[env.staging.observability]", 1)'
 mutate "staging の services が本番の Worker を指す (いまは無いが、足したときの検査)" \
   's += "\n[[services]]\nbinding = \"X\"\nservice = \"x-prod\"\n\n[[env.staging.services]]\nbinding = \"X\"\nservice = \"x-prod\"\n"'
+mutate "staging から本番の FCM の鍵の secret を指す" \
+  's += "\n[[env.staging.secrets_store_secrets]]\nbinding = \"CHIP_REMOTE_FCM_SA_KEY\"\nstore_id = \"x\"\nsecret_name = \"CHIP_REMOTE_FCM_SA_KEY\"\n"'
 
 
 exit "$fail"

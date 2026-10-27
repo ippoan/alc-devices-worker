@@ -47,6 +47,15 @@ binding = "AUTH_DEVICE_PAIR"
 service = "auth-worker"
 entrypoint = "DevicePairEntrypoint"
 
+# FCM の送信 (src/fcm.rs・crates/devices/src/fcm.rs): FCM の送信専用の service account の鍵 JSON (Secrets Store)。
+# ippoan/chip-remote と同じ secret を共有する (W6b-c のオーナーの判断。secret・IAM を増やさない)。
+# 本番だけに置く (env.staging には置かない。binding は env に継承されない。staging の FCM の口は rust の FCM が無いときと同じ 503。
+# scripts/check-exposure.sh が env 配下からこの secret を指さないことを検査する)。
+[[secrets_store_secrets]]
+binding = "CHIP_REMOTE_FCM_SA_KEY"
+store_id = "bd7bc91a3e5f4111add4acf6cb4b8733"
+secret_name = "CHIP_REMOTE_FCM_SA_KEY"
+
 # staging: DB は ippoan/alc-vein-worker の staging と同じもの (Workers VPC の binding DEVICES_DB_VPC から
 # 既存の Tunnel 経由で PgBouncer へ繋ぐ。src/db.rs)。Hyperdrive は通さない。
 [env.staging]

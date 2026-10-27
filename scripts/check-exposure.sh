@@ -95,6 +95,13 @@ for name, e in envs.items():
         if b.get("service") in prod_services:
             err(f"env.{name} の services が本番の Worker {b['service']} を指している (env 用の Worker を指すこと)")
 
+# 本番の Secrets Store の secret (FCM の鍵) を env 配下 (staging を含む) から指さない (staging から本番の端末へ送れてしまう)
+prod_secrets = {b.get("secret_name") for b in cfg.get("secrets_store_secrets", [])}
+for name, e in envs.items():
+    for b in e.get("secrets_store_secrets", []):
+        if b.get("secret_name") in prod_secrets:
+            err(f"env.{name} の secrets_store_secrets が本番の secret {b['secret_name']} を指している (本番だけに置く)")
+
 if errors:
     sys.exit(1)
 print(f"OK: {path} は本番が workers_dev / preview_urls = false・route 無しで、どの env も workers.dev を開けない")

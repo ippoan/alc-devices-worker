@@ -31,7 +31,20 @@ alc の端末の登録・管理の Cloudflare Worker `alc-devices`。rust-alc-ap
 
 内部: `GET /api/internal/devices/{device_id}/pairing-tenant` — 有効な端末のテナント (auth-worker の device credential 発行)。
 
-再ペアリング (`re-pair`・`authorize-repair`) と FCM を送る口はまだ rust-alc-api に在る (W6b-b・W6b-c)。
+再ペアリング (W6b-b): `POST /api/devices/re-pair` (端末) と `POST /api/devices/{id}/authorize-repair` (管理画面)。
+
+FCM で端末に送る口 (W6b-c、`crates/devices/src/notify.rs`):
+
+| 口 | method | 中身 |
+|---|---|---|
+| `/api/devices/fcm-notify-call` | POST | 着信の通知 (`X-Internal-Secret`) |
+| `/api/devices/fcm-dismiss-test` | POST | 試験の通知を閉じる (端末のテナントのほかの端末へ) |
+| `/api/devices/test-fcm-all-exclude` | POST | 試験の送信 (`X-Internal-Secret`) |
+| `/api/devices/trigger-update-dev` | POST | dev 端末の OTA (`X-Internal-Secret`) |
+| `/api/devices/{id}/test-fcm`・`/api/devices/test-fcm-all` | POST | 管理画面の試験の送信 |
+| `/api/devices/trigger-update` | POST | 管理画面の OTA |
+
+着信の設定 (`call-settings`) で always_on・bp_enabled を変えると、端末に `settings_changed` を送る。
 
 ## 開発
 
