@@ -14,3 +14,7 @@ path = "crates/devices/src/lib.rs"
 # 端末の登録・管理 (管理画面の口・端末の口・内部の口)
 [[files]]
 path = "crates/devices/src/devices.rs"
+
+# kiosk 端末の再ペアリング (判定・window を開ける口・取り直しの口。tests/re_pair_db.rs が偽の発行で通す。W6b-b)
+[[files]]
+path = "crates/devices/src/re_pair.rs"

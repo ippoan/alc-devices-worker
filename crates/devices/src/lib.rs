@@ -5,6 +5,7 @@
 //! - [`devices`] — 管理画面の口 (一覧・承認待ち・登録用のコードの発行・承認・却下・停止・再開・削除・着信の設定) と、
 //!   端末の口 (登録の申請・状態・受け取り・設定・最終ログイン・版と watchdog の報告・FCM token の登録)、
 //!   auth-worker の内部の口 (`/internal/devices/{device_id}/pairing-tenant`)
+//! - [`re_pair`] — kiosk 端末の再ペアリング (管理画面の window を開ける口と、端末の取り直しの口。発行は auth-worker の RPC) (W6b-b)
 //!
 //! **管理画面の口だけが `X-Tenant-ID` を要る** (auth-worker が付ける。無い・UUID でない → 401。
 //! `alc_core_wasm::require_tenant_header`。承認者は `X-User-ID` 等から取る)。端末の口と内部の口は rust でも
@@ -14,6 +15,7 @@
 //! ログ・エラー応答は固定の語だけ (端末の ID・コード・社員の名前・エラーの文を載せない)。
 
 pub mod devices;
+pub mod re_pair;
 
 use std::sync::Arc;
 
@@ -30,6 +32,8 @@ pub type LogSink = Arc<dyn Fn(&str) + Send + Sync>;
 pub struct AppState {
     pub pg: Arc<Mutex<PgClient>>,
     pub log: LogSink,
+    /// 再ペアリングの credential の発行 (auth-worker の binding が無ければ None = rust と同じく 404)
+    pub pairer: Option<re_pair::SharedPairer>,
 }
 
 impl AppState {
@@ -42,7 +46,11 @@ impl AppState {
 
 /// 全部の口。rust と同じく `/api` の下 (auth-worker は `/api/...` のまま Service Binding に渡す)
 pub fn router() -> Router<AppState> {
-    let tenant = devices::tenant_router().route_layer(middleware::from_fn(require_tenant_header));
-    let api = tenant.merge(devices::public_router());
+    let tenant = devices::tenant_router()
+        .merge(re_pair::tenant_router())
+        .route_layer(middleware::from_fn(require_tenant_header));
+    let api = tenant
+        .merge(devices::public_router())
+        .merge(re_pair::public_router());
     Router::new().nest("/api", api)
 }

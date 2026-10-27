@@ -10,6 +10,7 @@
 #![cfg(target_arch = "wasm32")]
 
 mod db;
+mod pair;
 mod tcp;
 
 use std::sync::Arc;
@@ -54,6 +55,11 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<Response<Bod
     let state = AppState {
         pg: Arc::new(Mutex::new(pg)),
         log: log_sink(),
+        // 本番だけの binding。無い env (staging・local) では再ペアリングは rust と同じく 404
+        pairer: env
+            .service("AUTH_DEVICE_PAIR")
+            .ok()
+            .map(|f| Arc::new(pair::AuthDevicePairer::new(f)) as devices::re_pair::SharedPairer),
     };
     let mut resp = match router().with_state(state).call(req).await {
         Ok(r) => r,
