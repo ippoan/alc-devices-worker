@@ -39,6 +39,13 @@ enabled = true
 binding = "DEVICES_HYPERDRIVE"
 id = "6bdf446634034f989d4e094d5510b162"
 
+# 再ペアリングの credential の発行 (src/pair.rs): auth-worker の named entrypoint DevicePairEntrypoint の RPC。
+# 共有の秘密を持たずに呼べる口なので本番だけに置く (env.staging には置かない。binding は env に継承されない。
+# staging の re-pair は発行できず 404 = rust で発行の client が無いときと同じ)。
+[[services]]
+binding = "AUTH_DEVICE_PAIR"
+service = "auth-worker"
+entrypoint = "DevicePairEntrypoint"
 
 # staging: DB は ippoan/alc-vein-worker の staging と同じもの (Workers VPC の binding DEVICES_DB_VPC から
 # 既存の Tunnel 経由で PgBouncer へ繋ぐ。src/db.rs)。Hyperdrive は通さない。

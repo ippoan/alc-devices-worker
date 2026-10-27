@@ -23,8 +23,10 @@ dependencies = [
  "axum",
  "devices",
  "futures-util",
+ "js-sys",
  "tokio-postgres",
  "tower-service",
+ "uuid",
  "wasm-bindgen",
  "wasm-bindgen-futures",
  "worker",
@@ -35,6 +37,7 @@ name = "alc-worker-db"
 version = "0.1.0"
 source = "git+https://github.com/ippoan/alc-worker-kit?rev=a256d2a84682d375dc649d3c4e0e2e91d38c17c2#a256d2a84682d375dc649d3c4e0e2e91d38c17c2"
 dependencies = [
+ "chrono",
  "futures-util",
  "tokio-postgres",
  "uuid",
@@ -191,6 +194,7 @@ dependencies = [
  "iana-time-zone",
  "js-sys",
  "num-traits",
+ "serde",
  "wasm-bindgen",
  "windows-link",
 ]
@@ -247,6 +251,7 @@ dependencies = [
  "alc-core-wasm",
  "alc-worker-db",
  "axum",
+ "chrono",
  "futures-util",
  "serde",
  "serde_json",

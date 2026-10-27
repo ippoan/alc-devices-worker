@@ -2,12 +2,13 @@
 
 端末の登録・管理の Worker `alc-devices` (Refs ippoan/rust-alc-api#680)。rust-alc-api の `crates/alc-devices` の
 devices (W6b) を移す先で、path・method・JSON の形・status は rust と同じ (alc-app の管理画面・AlcoholChecker 端末・
-auth-worker がそのまま使う)。口は `/api/devices/...` と `/api/internal/devices/{device_id}/pairing-tenant` (`crates/devices/src/devices.rs`)。
+auth-worker がそのまま使う)。口は `/api/devices/...` と `/api/internal/devices/{device_id}/pairing-tenant` (`crates/devices/src/devices.rs`)、再ペアリングの `/api/devices/re-pair`・`/api/devices/{id}/authorize-repair` (`crates/devices/src/re_pair.rs`)。
 直下 = Worker (wasm 専用)、`crates/devices/` = 口・SQL。
 
-W6b は 3 段: **a = 外を呼ばない口 (この repo の今の範囲)** / b = 再ペアリング (`re-pair`・`authorize-repair`。rust は auth-worker を
-HTTP で呼ぶ) / c = FCM を送る 7 口 (`fcm-notify-call`・`fcm-dismiss-test`・`test-fcm`・`test-fcm-all`・`test-fcm-all-exclude`・
-`trigger-update`・`trigger-update-dev`。サービスアカウントの鍵の置き方を決めてから)。b・c の口はまだ rust に在る。
+W6b は 3 段: a = 外を呼ばない口 / b = 再ペアリング (`re-pair`・`authorize-repair`。発行は auth-worker の RPC
+`DevicePairEntrypoint.pairInternal` を本番だけの Service Binding `AUTH_DEVICE_PAIR` で呼ぶ (`src/pair.rs`)。共有の秘密は持たない。
+binding の無い env では rust で発行の client が無いときと同じく 404) / c = FCM を送る 7 口 (`fcm-notify-call`・`fcm-dismiss-test`・`test-fcm`・`test-fcm-all`・`test-fcm-all-exclude`・
+`trigger-update`・`trigger-update-dev`。サービスアカウントの鍵の置き方を決めてから)。c の口はまだ rust に在る。
 
 **呼び手は auth-worker の Service Binding だけ** (この Worker は認証しない)。管理画面の口は auth-worker が付けた
 `X-Tenant-ID` (と承認者の `X-User-ID`・`X-User-Email`・`X-User-Role`) を信頼する。端末の口・内部の口は rust と同じく
@@ -36,7 +37,8 @@ URL が無ければ失敗 (skip しない)。接続ロールは `alc_api_rt`。
 - 端末の表の文には tenant_id を明示する (rust は RLS 任せ)。承認・却下の対象の登録は「自分のテナントかテナント未定」だけ。
 - 登録のコードと settings_token は DB が作る (`gen_random_uuid()`)。wasm で乱数を引かない。
 - 着信の設定 (`call-settings`) で always_on・bp_enabled を変えたときの FCM の通知は W6b-c で足す (今は送らない)。
+- 再ペアリングの判定の値は rust の既定値の定数 (`re_pair::POLICY`・`WINDOW_SECS`。本番の Cloud Run は `RE_PAIR_*` を設定していなかった)。判定の「今」は DB の `now()`。
 - DB は `PgClient::tenant_tx` + `query_typed` 系だけ。名前付き prepared statement 禁止。Row を tx の外へ出さない。
-- `coverage_100.toml` の登録を外さない。CI の本数 (lib 3・admin_db 6・device_db 7) はテストを足したら上げる。
+- `coverage_100.toml` の登録を外さない。CI の本数 (lib 7・admin_db 6・device_db 7・re_pair_db 4) はテストを足したら上げる。
 - public repo: ホスト名・tenant UUID・個人情報を書かない。`v*` タグ = 本番 (Tag Release 手動)。
 - kit の rev は直下 `Cargo.toml` の 1 か所 (alc-people-worker と同じ rev)。

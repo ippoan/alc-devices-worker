@@ -184,18 +184,20 @@ pub async fn rt_client() -> PgClient {
     client_as(RT_ROLE).await
 }
 
-/// 接続が切れた `alc_api_rt` の接続 (backend を落とした接続)
-pub async fn broken_client() -> PgClient {
-    let mut pg = rt_client().await;
-    let pid: i32 = pg
-        .tenant_tx(Uuid::nil(), |tx| {
-            Box::pin(async move {
-                let row = tx.query_typed_one("SELECT pg_backend_pid()", &[]).await?;
-                Ok(row.get::<_, i32>(0))
-            })
+/// 接続の backend の pid (あとで落とすため)
+pub async fn backend_pid(pg: &mut PgClient) -> i32 {
+    pg.tenant_tx(Uuid::nil(), |tx| {
+        Box::pin(async move {
+            let row = tx.query_typed_one("SELECT pg_backend_pid()", &[]).await?;
+            Ok(row.get::<_, i32>(0))
         })
-        .await
-        .unwrap();
+    })
+    .await
+    .unwrap()
+}
+
+/// backend を落とす (superuser で)
+pub async fn terminate(pid: i32) {
     let terminated: bool = admin()
         .await
         .query_one("SELECT pg_terminate_backend($1)", &[&pid])
@@ -203,6 +205,13 @@ pub async fn broken_client() -> PgClient {
         .unwrap()
         .get(0);
     assert!(terminated);
+}
+
+/// 接続が切れた `alc_api_rt` の接続 (backend を落とした接続)
+pub async fn broken_client() -> PgClient {
+    let mut pg = rt_client().await;
+    let pid = backend_pid(&mut pg).await;
+    terminate(pid).await;
     pg
 }
 
@@ -232,13 +241,19 @@ impl App {
     }
 }
 
-/// worker の src/lib.rs と同じ組み立て
+/// worker の src/lib.rs と同じ組み立て (再ペアリングの発行は無し)
 pub fn build(pg: PgClient) -> App {
+    build_with(pg, None)
+}
+
+/// 再ペアリングの発行 (偽物) を差して組み立てる
+pub fn build_with(pg: PgClient, pairer: Option<devices::re_pair::SharedPairer>) -> App {
     let logs = Arc::new(StdMutex::new(Vec::new()));
     let sink = logs.clone();
     let state = AppState {
         pg: Arc::new(Mutex::new(pg)),
         log: Arc::new(move |m: &str| sink.lock().unwrap().push(m.to_owned())),
+        pairer,
     };
     App {
         router: router().with_state(state),

@@ -22,7 +22,7 @@ members = ["crates/devices"]
 # rev を上げるときは 2 つを一緒に上げ、Cargo.lock も一緒に更新する。
 [workspace.dependencies]
 alc-core-wasm = { git = "https://github.com/ippoan/alc-worker-kit", rev = "a256d2a84682d375dc649d3c4e0e2e91d38c17c2" }
-alc-worker-db = { git = "https://github.com/ippoan/alc-worker-kit", rev = "a256d2a84682d375dc649d3c4e0e2e91d38c17c2" }
+alc-worker-db = { git = "https://github.com/ippoan/alc-worker-kit", rev = "a256d2a84682d375dc649d3c4e0e2e91d38c17c2", features = ["chrono"] }
 
 # 使わない依存は入れない
 [dependencies]
@@ -32,6 +32,9 @@ futures-util = { version = "0.3", default-features = false, features = ["std"] }
 devices = { path = "crates/devices" }
 tokio-postgres = { version = "0.7", default-features = false, features = ["js"] }
 tower-service = "0.3"
+# 再ペアリングの発行 (src/pair.rs): auth-worker の RPC の戻り値を読む・端末の ID を文字列にする
+js-sys = "0.3"
+uuid = "1"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 worker = { version = "0.8", features = ["http", "axum", "tokio-postgres"] }
