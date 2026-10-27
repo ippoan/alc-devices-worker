@@ -248,12 +248,28 @@ pub fn build(pg: PgClient) -> App {
 
 /// 再ペアリングの発行 (偽物) を差して組み立てる
 pub fn build_with(pg: PgClient, pairer: Option<devices::re_pair::SharedPairer>) -> App {
+    build_full(pg, pairer, None, None)
+}
+
+/// テストの今 (2026-10-28 水 10:30 JST)
+pub const NOW_MS: i64 = 1_793_151_000_000;
+
+/// FCM の送信 (偽物) と `FCM_INTERNAL_SECRET` まで差して組み立てる
+pub fn build_full(
+    pg: PgClient,
+    pairer: Option<devices::re_pair::SharedPairer>,
+    fcm: Option<devices::fcm::SharedFcm>,
+    internal_secret: Option<&str>,
+) -> App {
     let logs = Arc::new(StdMutex::new(Vec::new()));
     let sink = logs.clone();
     let state = AppState {
         pg: Arc::new(Mutex::new(pg)),
         log: Arc::new(move |m: &str| sink.lock().unwrap().push(m.to_owned())),
         pairer,
+        fcm,
+        internal_secret: internal_secret.map(str::to_owned),
+        clock: Arc::new(|| NOW_MS),
     };
     App {
         router: router().with_state(state),

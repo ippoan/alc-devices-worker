@@ -10,6 +10,8 @@ publish = false
 # 出どころは直下の Cargo.toml の [workspace.dependencies] の 1 か所 (ここに git / path を書かない)
 alc-core-wasm = { workspace = true }
 alc-worker-db = { workspace = true }
+# FCM の service account の JWT の RS256 の署名 (`fcm`。ippoan/alc-lineworks-worker と同じ kit の crate)
+alc-worker-crypto = { workspace = true }
 axum = { version = "0.8", default-features = false, features = ["json", "query"] }
 # 再ペアリングの window・cooldown の時刻 (`re_pair`)。今の時刻は DB の now() から取るので clock は要らない
 chrono = { version = "0.4", default-features = false, features = ["alloc", "serde"] }
@@ -26,4 +28,8 @@ tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "sync"] 
 # tests/ の実 DB の接続 (runtime 付き)。dev-dependency なので wasm のビルドには入らない
 tokio-postgres = { version = "0.7", features = ["with-uuid-1", "with-chrono-0_4", "with-serde_json-1"] }
 tower = { version = "0.5", features = ["util"] }
+# fcm の単体テスト: 鍵を作って署名を確かめる (alc-worker-crypto が通常の依存で引いているのと同じ版)
+rand = "0.8"
+rsa = { version = "0.9", default-features = false, features = ["std", "pem", "u64_digit"] }
+sha2 = { version = "0.10", default-features = false, features = ["oid"] }
 uuid = { version = "1", features = ["v4"] }

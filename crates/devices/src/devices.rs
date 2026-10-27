@@ -20,7 +20,8 @@
 //!   (rust の `code_exists` の繰り返し) は持たない (122 bit の乱数で、表の UNIQUE が最後の守り)
 //! - 端末の表の文に tenant_id を明示した (rust は RLS 任せ)。承認の対象の登録は、承認者のテナントかテナント未定のものだけ引く
 //!   (rust は ID で引いて、更新の RLS で他テナントの登録を書き換えられないだけだった)
-//! - 着信の設定で always_on・bp_enabled が変わったときの FCM の通知 (`settings_changed`) はまだ送らない (W6b-c で FCM を足す)
+//! - 着信の設定で always_on・bp_enabled が変わったときの FCM の通知 (`settings_changed`) は [`crate::notify`] が送る (W6b-c)。
+//!   送り終えてから 204 を返す (FCM が無い・送れなくても 204 = rust と同じ)
 //! - ログに端末の ID・コード・社員の名前を出さない (固定の語だけ)
 
 use alc_core_wasm::{AuthUser, TenantId};
@@ -606,7 +607,7 @@ pub async fn create_registration_request(
 }
 
 /// 端末の状態 (テナント・状態・settings_token)。テナントに依らない関数なので、どの transaction で流してもよい
-async fn re_pair_state(
+pub(crate) async fn re_pair_state(
     tx: &TenantTx<'_>,
     device_id: Uuid,
 ) -> Result<Option<(Uuid, String, Option<Uuid>)>, Error> {
@@ -1130,15 +1131,21 @@ async fn call_settings_handler(
     Path(id): Path<Uuid>,
     Json(body): Json<UpdateCallSettingsBody>,
 ) -> Result<StatusCode, StatusCode> {
-    let mut pg = state.pg.lock().await;
-    let found = update_call_settings(&mut pg, tenant_id, id, body)
-        .await
-        .map_err(|e| state.db_fail("call settings", &e))?;
-    if found {
-        Ok(StatusCode::NO_CONTENT)
-    } else {
-        Err(StatusCode::NOT_FOUND)
+    let settings_changed = body.always_on.is_some() || body.bp_enabled.is_some();
+    let found = {
+        let mut pg = state.pg.lock().await;
+        update_call_settings(&mut pg, tenant_id, id, body)
+            .await
+            .map_err(|e| state.db_fail("call settings", &e))?
+    };
+    if !found {
+        return Err(StatusCode::NOT_FOUND);
     }
+    // always_on・bp_enabled が変わったら、端末に設定を取り直させる
+    if settings_changed {
+        crate::notify::notify_settings_changed(&state, tenant_id, id).await;
+    }
+    Ok(StatusCode::NO_CONTENT)
 }
 
 // --- 端末の口 ---
@@ -1347,7 +1354,7 @@ impl From<DeviceSettings> for DeviceSettingsResponse {
 /// 送られなければ記録だけして通す、旧端末 (未発行・未送信) はそのまま。返すのは「通す」か
 pub fn device_token_ok(provided: Option<&str>, issued: Option<Uuid>) -> Result<bool, StatusCode> {
     match (provided, issued) {
-        (Some(p), Some(t)) if alc_core_wasm_eq(p, &t.to_string()) => Ok(true),
+        (Some(p), Some(t)) if constant_time_eq(p, &t.to_string()) => Ok(true),
         (Some(_), _) => Err(StatusCode::UNAUTHORIZED),
         (None, Some(_)) => Ok(false),
         (None, None) => Ok(true),
@@ -1355,7 +1362,7 @@ pub fn device_token_ok(provided: Option<&str>, issued: Option<Uuid>) -> Result<b
 }
 
 /// 長さの漏れない比較 (rust の `constant_time_eq` と同じ働き)
-fn alc_core_wasm_eq(a: &str, b: &str) -> bool {
+pub(crate) fn constant_time_eq(a: &str, b: &str) -> bool {
     let (a, b) = (a.as_bytes(), b.as_bytes());
     if a.len() != b.len() {
         return false;
@@ -1534,7 +1541,7 @@ mod tests {
         );
         assert_eq!(device_token_ok(None, Some(t)), Ok(false));
         assert_eq!(device_token_ok(None, None), Ok(true));
-        assert!(!alc_core_wasm_eq("ab", "abc"));
+        assert!(!constant_time_eq("ab", "abc"));
     }
 
     #[test]

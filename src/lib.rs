@@ -10,6 +10,7 @@
 #![cfg(target_arch = "wasm32")]
 
 mod db;
+mod fcm;
 mod pair;
 mod tcp;
 
@@ -52,9 +53,18 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<Response<Bod
             ));
         }
     };
+    let clock: devices::Clock = Arc::new(|| js_sys::Date::now() as i64);
     let state = AppState {
         pg: Arc::new(Mutex::new(pg)),
         log: log_sink(),
+        // 本番だけの Secrets Store の binding。無い env (staging・local) では FCM の口は rust と同じく 503
+        fcm: fcm::sender(&env, clock.clone()).await,
+        // FCM_INTERNAL_SECRET (X-Internal-Secret の照合)。本番の rust-alc-api にも無く、無ければ照合する口は 503 (fail-closed)
+        internal_secret: env
+            .secret("FCM_INTERNAL_SECRET")
+            .ok()
+            .map(|s| s.to_string()),
+        clock,
         // 本番だけの binding。無い env (staging・local) では再ペアリングは rust と同じく 404
         pairer: env
             .service("AUTH_DEVICE_PAIR")

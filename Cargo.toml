@@ -16,13 +16,14 @@ crate-type = ["cdylib"]
 [workspace]
 members = ["crates/devices"]
 
-# alc-core-wasm と alc-worker-db は ippoan/alc-worker-kit から引く。git 依存・rev 固定で、**2 つとも同じ rev**
+# alc-core-wasm・alc-worker-db・alc-worker-crypto は ippoan/alc-worker-kit から引く。git 依存・rev 固定で、**3 つとも同じ rev**
 # (ippoan/alc-people-worker と同じ rev)。**書くのはここ 1 か所だけ** (worker と crates/devices は `workspace = true` で継承する)。
 # 出どころが 2 つになると `PgClient` (alc-worker-db) などが別の型になり、コンパイルは通るのに全リクエストが 500 になる。
 # rev を上げるときは 2 つを一緒に上げ、Cargo.lock も一緒に更新する。
 [workspace.dependencies]
 alc-core-wasm = { git = "https://github.com/ippoan/alc-worker-kit", rev = "a256d2a84682d375dc649d3c4e0e2e91d38c17c2" }
 alc-worker-db = { git = "https://github.com/ippoan/alc-worker-kit", rev = "a256d2a84682d375dc649d3c4e0e2e91d38c17c2", features = ["chrono"] }
+alc-worker-crypto = { git = "https://github.com/ippoan/alc-worker-kit", rev = "a256d2a84682d375dc649d3c4e0e2e91d38c17c2" }
 
 # 使わない依存は入れない
 [dependencies]
