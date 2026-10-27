@@ -1,0 +1,16 @@
+# 行カバレッジ 100% の登録簿 (ippoan/alc-people-worker の同名のファイルの写し。Refs ippoan/rust-alc-api#680)。
+#
+#   bash scripts/fetch-migrations.sh
+#   DEVICES_TEST_ADMIN_DATABASE_URL=... cargo llvm-cov --locked -p devices --text > cov-devices.txt
+#   bash scripts/check_coverage_100.sh --use-cache cov-devices.txt
+#
+# 計測するのは `cargo test -p devices` の全部 = 各 module の単体テストと tests/admin_db.rs・device_db.rs
+# (口から実 DB まで。接続先が無ければ失敗する)。worker 本体 (直下の src/、wasm 専用) は native で計測できないので対象外。
+
+# tenant の layer・DB の失敗の語・router の組み立て
+[[files]]
+path = "crates/devices/src/lib.rs"
+
+# 端末の登録・管理 (管理画面の口・端末の口・内部の口)
+[[files]]
+path = "crates/devices/src/devices.rs"
