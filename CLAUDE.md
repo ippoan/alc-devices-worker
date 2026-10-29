@@ -12,10 +12,12 @@ binding の無い env では rust で発行の client が無いときと同じ�
 `CHIP_REMOTE_FCM_SA_KEY` (FCM の送信専用の service account の鍵 JSON。ippoan/chip-remote と共有するオーナーの判断。secret・IAM を増やさない。
 本番だけの binding、`src/fcm.rs`) で RS256 の JWT を `alc_worker_crypto::jwt::sign_rs256` で作り、`oauth2.googleapis.com/token` で
 access token に替えて送る。鍵の無い env (staging・local) の FCM の口は rust の FCM が無いときと同じ 503。
-`X-Internal-Secret` を照合する 3 口 (`fcm-notify-call`・`test-fcm-all-exclude`・`trigger-update-dev`) は `FCM_INTERNAL_SECRET` が無ければ 503
-(rust と同じ fail-closed。本番の rust-alc-api にも設定が無い。secret は増やさない)。
+`X-Internal-Secret` を照合する 3 口 (`fcm-notify-call`・`test-fcm-all-exclude`・`trigger-update-dev`) の値は Secrets Store の
+`INTERNAL_SHARED_SECRET` (本番だけの binding。auth-worker・cf-alc-signaling と同じ entry を共有し、secret は増やさない)。無い env では 503
+(fail-closed)。rust の頃の `FCM_INTERNAL_SECRET` は本番に無く、着信の FCM は届いていなかった (Refs ippoan/rust-alc-api#680)。
 
-**呼び手は auth-worker の Service Binding だけ** (この Worker は認証しない)。管理画面の口は auth-worker が付けた
+**呼び手は auth-worker の Service Binding だけ** (この Worker は認証しない)。例外は着信の FCM の 2 口 (`fcm-notify-call`・
+`test-fcm-all-exclude`) で、ippoan/alc-app の cf-alc-signaling が Service Binding `ALC_DEVICES` で直接呼ぶ (`X-Internal-Secret` を照合)。管理画面の口は auth-worker が付けた
 `X-Tenant-ID` (と承認者の `X-User-ID`・`X-User-Email`・`X-User-Role`) を信頼する。端末の口・内部の口は rust と同じく
 テナントのヘッダを見ず、テナントは端末の ID から SECURITY DEFINER の関数で引く。auth-worker の振り分け (`ALC_BINDING_ROUTES`) は別の PR。
 

@@ -42,7 +42,7 @@ pub struct AppState {
     pub pairer: Option<re_pair::SharedPairer>,
     /// FCM の送信 (鍵が無ければ None = rust と同じく FCM の口は 503。着信の設定の通知は送らない)
     pub fcm: Option<fcm::SharedFcm>,
-    /// `X-Internal-Secret` と比べる `FCM_INTERNAL_SECRET` (無ければ None = 照合する口は 503。fail-closed)
+    /// `X-Internal-Secret` と比べる値 (worker は Secrets Store の `INTERNAL_SHARED_SECRET`。無ければ None = 照合する口は 503。fail-closed)
     pub internal_secret: Option<String>,
     pub clock: Clock,
 }

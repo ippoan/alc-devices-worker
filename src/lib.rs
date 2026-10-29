@@ -21,7 +21,18 @@ use axum::http::{HeaderValue, Response, StatusCode};
 use devices::{router, AppState, LogSink};
 use futures_util::lock::Mutex;
 use tower_service::Service;
+use worker::send::SendFuture;
 use worker::{console_error, event, Context, Env, HttpRequest, Result, WorkerVersionMetadata};
+
+/// `X-Internal-Secret` を照合する口 (着信の FCM `fcm-notify-call`・`test-fcm-all-exclude`・`trigger-update-dev`) の値の
+/// Secrets Store の binding (wrangler.toml。auth-worker・cf-alc-signaling と同じ entry を共有する。新しい secret は作らない)
+const INTERNAL_SECRET_BINDING: &str = "INTERNAL_SHARED_SECRET";
+
+/// 照合の値を読む (binding が無い env = staging・local では None = 照合する口は 503)
+async fn internal_secret(env: &Env) -> Option<String> {
+    let store = env.secret_store(INTERNAL_SECRET_BINDING).ok()?;
+    SendFuture::new(store.get()).await.ok()?
+}
 
 fn log_sink() -> LogSink {
     Arc::new(|message| console_error!("{message}"))
@@ -59,11 +70,9 @@ async fn fetch(req: HttpRequest, env: Env, _ctx: Context) -> Result<Response<Bod
         log: log_sink(),
         // 本番だけの Secrets Store の binding。無い env (staging・local) では FCM の口は rust と同じく 503
         fcm: fcm::sender(&env, clock.clone()).await,
-        // FCM_INTERNAL_SECRET (X-Internal-Secret の照合)。本番の rust-alc-api にも無く、無ければ照合する口は 503 (fail-closed)
-        internal_secret: env
-            .secret("FCM_INTERNAL_SECRET")
-            .ok()
-            .map(|s| s.to_string()),
+        // X-Internal-Secret の照合の値 = Secrets Store の INTERNAL_SHARED_SECRET (本番だけの binding。cf-alc-signaling と同じ entry)。
+        // 無い env (staging・local) では照合する口は 503 (fail-closed)
+        internal_secret: internal_secret(&env).await,
         clock,
         // 本番だけの binding。無い env (staging・local) では再ペアリングは rust と同じく 404
         pairer: env

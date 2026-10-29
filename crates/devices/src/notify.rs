@@ -11,8 +11,9 @@
 //! - `POST /devices/{id}/test-fcm` — 1 台へ試験の送信。`POST /devices/test-fcm-all` — テナントの全端末へ
 //! - `POST /devices/trigger-update` — テナントの端末の OTA
 //!
-//! `X-Internal-Secret` は `FCM_INTERNAL_SECRET` と定数時間で比べる。**設定が無ければ 503** (rust と同じ fail-closed。本番の
-//! rust-alc-api にも設定が無く、この 3 口は 503 か Cloud Run の手前で 403 だった)。
+//! `X-Internal-Secret` は照合の値 (worker は Secrets Store の `INTERNAL_SHARED_SECRET`、本番だけ) と定数時間で比べる。
+//! **設定が無ければ 503** (fail-closed)。rust-alc-api の頃は照合の値 `FCM_INTERNAL_SECRET` が本番に無く、着信の FCM は届いていなかった。
+//! 呼び手は cf-alc-signaling (Service Binding。同じ INTERNAL_SHARED_SECRET を載せる。Refs ippoan/rust-alc-api#680)。
 //! 全テナントを横断する読み取りは SECURITY DEFINER の関数 (migration 158) だけを nil のテナントの transaction で流す。
 //! 送り終えてから応答する (fire-and-forget にしない)。
 //!
@@ -268,7 +269,7 @@ pub fn should_notify(call_enabled: bool, schedule: Option<&Value>, now_ms: i64) 
     }
 }
 
-/// `X-Internal-Secret` を `FCM_INTERNAL_SECRET` と比べる。設定が無ければ 503 (fail-closed)、違えば 401
+/// `X-Internal-Secret` を照合の値 (`INTERNAL_SHARED_SECRET`) と比べる。設定が無ければ 503 (fail-closed)、違えば 401
 pub fn check_internal_secret(
     expected: Option<&str>,
     headers: &HeaderMap,

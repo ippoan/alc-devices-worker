@@ -254,7 +254,7 @@ pub fn build_with(pg: PgClient, pairer: Option<devices::re_pair::SharedPairer>) 
 /// テストの今 (2026-10-28 水 10:30 JST)
 pub const NOW_MS: i64 = 1_793_151_000_000;
 
-/// FCM の送信 (偽物) と `FCM_INTERNAL_SECRET` まで差して組み立てる
+/// FCM の送信 (偽物) と 照合の値 (`INTERNAL_SHARED_SECRET`) まで差して組み立てる
 pub fn build_full(
     pg: PgClient,
     pairer: Option<devices::re_pair::SharedPairer>,
