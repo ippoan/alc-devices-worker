@@ -56,6 +56,13 @@ binding = "CHIP_REMOTE_FCM_SA_KEY"
 store_id = "bd7bc91a3e5f4111add4acf6cb4b8733"
 secret_name = "CHIP_REMOTE_FCM_SA_KEY"
 
+# X-Internal-Secret の照合の値 (src/lib.rs。着信の FCM の 2 口と trigger-update-dev)。auth-worker・ippoan/alc-app の cf-alc-signaling と
+# 同じ Secrets Store の entry を共有する (新しい secret は作らない)。本番だけに置く (env.staging には置かない。無い env の照合する口は 503)
+[[secrets_store_secrets]]
+binding = "INTERNAL_SHARED_SECRET"
+store_id = "bd7bc91a3e5f4111add4acf6cb4b8733"
+secret_name = "INTERNAL_SHARED_SECRET"
+
 # staging: DB は ippoan/alc-vein-worker の staging と同じもの (Workers VPC の binding DEVICES_DB_VPC から
 # 既存の Tunnel 経由で PgBouncer へ繋ぐ。src/db.rs)。Hyperdrive は通さない。
 [env.staging]
